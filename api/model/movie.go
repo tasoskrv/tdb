@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	//"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -10,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	//_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,29 +29,12 @@ type Movie struct {
 
 }
 
-//Book Struct (Model)
-type Book struct {
-	ID     string  `json:"id"`
-	Title  string  `json:"title"`
-	Author *Author `json:"author"`
-}
-
-//Author ...
-type Author struct {
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
-}
-
-//Books ...
-var Books []Book
-
-//GetBooks ...
-func GetBooks(w http.ResponseWriter, r *http.Request) {
+func GetMovies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(Books)
 }
 
-func GetBook(w http.ResponseWriter, r *http.Request) {
+func GetMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r) //Get params
 
@@ -67,14 +48,14 @@ func GetBook(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&Book{})
 }
 
-func CreateBook(w http.ResponseWriter, r *http.Request) {
+func CreateMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var movie Movie
 
 	decoder := json.NewDecoder(r.Body)
 	_ = decoder.Decode(&movie)
-	//json.NewEncoder(w).Encode(book)
+
 	dbcon, f, _ := InitDatabase()
 
 	mCol := dbcon.db.Collection("movie")
@@ -102,7 +83,7 @@ func CreateBook(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func UpdateBook(w http.ResponseWriter, r *http.Request) {
+func UpdateMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r) //Get params
 	for index, item := range Books {
@@ -121,7 +102,7 @@ func UpdateBook(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Books)
 }
 
-func DeleteBook(w http.ResponseWriter, r *http.Request) {
+func DeleteMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r) //Get params
 	for index, item := range Books {
