@@ -1,0 +1,31 @@
+package api
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/gorilla/mux"
+
+	"./model"
+)
+
+func Start() {
+	r := mux.NewRouter()
+
+	//mock data
+	model.Books = append(model.Books, model.Book{ID: "1", Title: "my title", Author: &model.Author{
+		Firstname: "Tasos", Lastname: "Kar",
+	}})
+	model.Books = append(model.Books, model.Book{ID: "2", Title: "my title2", Author: &model.Author{
+		Firstname: "Tasos2", Lastname: "Kar2",
+	}})
+
+	//Route Handlers / Endpoints
+	r.HandleFunc("/api/books", model.GetBooks).Methods("GET")
+	r.HandleFunc("/api/books/{id}", model.GetBook).Methods("GET")
+	r.HandleFunc("/api/books", model.CreateBook).Methods("POST")
+	r.HandleFunc("/api/books/{id}", model.UpdateBook).Methods("PUT")
+	r.HandleFunc("/api/books/{id}", model.DeleteBook).Methods("DELETE")
+
+	log.Fatal(http.ListenAndServe(":8000", r))
+}
