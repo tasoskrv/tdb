@@ -4,18 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+//Movie ...
 type Movie struct {
 	Tconst         string `bson:"tconst" json:"tconst"`                 //alphanumeric unique identifier of the title
 	TitleType      string `bson:"titletype" json:"titletype"`           //the type/format of the title (e.g. movie, short, tvseries, tvepisode, video, etc)
@@ -29,26 +25,13 @@ type Movie struct {
 
 }
 
-func GetMovies(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Books)
+type Users struct {
+	Cl *mongo.Client
+	DB *mongo.Database
 }
 
-func GetMovie(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) //Get params
-
-	for _, item := range Books {
-		if item.ID == params["id"] {
-			json.NewEncoder(w).Encode(item)
-			return
-		}
-	}
-
-	json.NewEncoder(w).Encode(&Book{})
-}
-
-func CreateMovie(w http.ResponseWriter, r *http.Request) {
+//CreateMovie ... creates a movie
+func (users *Users) CreateMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var movie Movie
@@ -56,124 +39,59 @@ func CreateMovie(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	_ = decoder.Decode(&movie)
 
-	dbcon, f, _ := InitDatabase()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
 
-	mCol := dbcon.db.Collection("movie")
-	_, err2 := mCol.InsertOne(dbcon.ctx, bson.D{
-		{Key: "tconst", Value: movie.Tconst},
-		{Key: "titletype", Value: movie.TitleType},
-	})
-	/*
-		mCol.InsertOne(dbcon.ctx, Movie{
-			Tconst:         movie.Tconst,
-			TitleType:      movie.TitleType,
-			PrimaryTitle:   movie.PrimaryTitle,
-			OriginalTitle:  movie.OriginalTitle,
-			IsAdult:        movie.IsAdult,
-			EndYear:        movie.EndYear,
-			RuntimeMinutes: movie.RuntimeMinutes,
-			Genres:         movie.Genres,
-		})
-	*/
+	mCol := users.DB.Collection("movie")
+	_, err2 := mCol.InsertOne(ctx, bson.M{
+		"tconst":         movie.Tconst,
+		"titletype":      movie.TitleType,
+		"primarytitle":   movie.PrimaryTitle,
+		"originaltitle":  movie.OriginalTitle,
+		"isadult":        movie.IsAdult,
+		"endyear":        movie.EndYear,
+		"runtimeminutes": movie.RuntimeMinutes,
+		"genres":         movie.Genres,
+	},
+	)
+
 	if err2 != nil {
 		fmt.Println(err2)
 	}
 
-	f()
-
 }
 
 func UpdateMovie(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) //Get params
-	for index, item := range Books {
-		if item.ID == params["id"] {
-			Books = append(Books[:index], Books[index+1:]...)
+	/*
+		w.Header().Set("Content-Type", "application/json")
+		params := mux.Vars(r) //Get params
+		for index, item := range Books {
+			if item.ID == params["id"] {
+				Books = append(Books[:index], Books[index+1:]...)
 
-			var book Book
-			_ = json.NewDecoder(r.Body).Decode(&book)
-			book.ID = strconv.Itoa(rand.Intn(1000000))
-			Books = append(Books, book)
-			json.NewEncoder(w).Encode(book)
-			return
+				var book Book
+				_ = json.NewDecoder(r.Body).Decode(&book)
+				book.ID = strconv.Itoa(rand.Intn(1000000))
+				Books = append(Books, book)
+				json.NewEncoder(w).Encode(book)
+				return
+			}
 		}
-	}
 
-	json.NewEncoder(w).Encode(Books)
+		json.NewEncoder(w).Encode(Books)
+	*/
 }
 
 func DeleteMovie(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) //Get params
-	for index, item := range Books {
-		if item.ID == params["id"] {
-			Books = append(Books[:index], Books[index+1:]...)
-			break
+	/*
+		w.Header().Set("Content-Type", "application/json")
+		params := mux.Vars(r) //Get params
+		for index, item := range Books {
+			if item.ID == params["id"] {
+				Books = append(Books[:index], Books[index+1:]...)
+				break
+			}
 		}
-	}
 
-	json.NewEncoder(w).Encode(Books)
+		json.NewEncoder(w).Encode(Books)*/
 }
-
-type dbconn struct {
-	client *mongo.Client
-	db     *mongo.Database
-	ctx    context.Context
-}
-
-func InitDatabase() (dbconn, func(), error) {
-	connMongo := "mongodb://127.0.0.1:2717"
-
-	dbMongo := "tdb"
-
-	//Create client
-	client, err := mongo.NewClient(options.Client().ApplyURI(connMongo))
-	if err != nil {
-		return dbconn{}, nil, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-
-	//Connect to mongo
-	err = client.Connect(ctx)
-	if err != nil {
-		return dbconn{}, nil, err
-	}
-
-	// Return disconnect as func to defer in main
-	f := func() {
-		defer cancel()
-		client.Disconnect(ctx)
-	}
-
-	//Ping Database
-	err = client.Ping(ctx, readpref.Primary())
-	if err != nil {
-		return dbconn{}, f, err
-	}
-	db := client.Database(dbMongo)
-
-	return dbconn{client: client, db: db, ctx: ctx}, f, nil
-
-}
-
-/*
-func connectMysql() {
-	//  does not open any physical connection to the database server, but it will validate its arguments
-	db, err := sql.Open("mysql", "root:mysql123@tcp(127.0.0.1:3306)/tdb")
-	defer db.Close()
-
-	if err != nil {
-		log.Fatal(err)
-	} else {
-		err = db.Ping()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-
-	//res, err := db.Exec(`insert into movie (tconst, titletype, primarytitle, originaltitle, isadult, startyear, endyear, runtimeminutes, genres)
-	//values ('` + tconst + `')`)
-
-}
-*/
