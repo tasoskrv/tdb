@@ -11,15 +11,15 @@ import (
 )
 
 //Start main.DBconn ...
-func Start(cl *mongo.Client, d *mongo.Database) {
+func Start(client *mongo.Client, database *mongo.Database) {
 
-	model := &model.Users{Cl: cl, DB: d}
+	modelStr := &model.MongoCon{Client: client, Database: database}
 
 	r := mux.NewRouter()
 	//Route Handlers / Endpoints
 	//r.HandleFunc("/api/movies", model.GetMovies).Methods("GET")
 	//r.HandleFunc("/api/movies/{id}", model.GetMovie).Methods("GET")
-	r.HandleFunc("/api/movies", model.CreateMovie).Methods("POST")
+	r.HandleFunc("/api/movies", modelStr.CreateMovie).Methods("POST")
 	//r.HandleFunc("/api/movies/{id}", model.UpdateMovie).Methods("PUT")
 	//r.HandleFunc("/api/movies/{id}", model.DeleteMovie).Methods("DELETE")
 

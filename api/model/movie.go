@@ -8,30 +8,40 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-//Movie ...
+//Movie structure
 type Movie struct {
-	Tconst         string `bson:"tconst" json:"tconst"`                 //alphanumeric unique identifier of the title
-	TitleType      string `bson:"titletype" json:"titletype"`           //the type/format of the title (e.g. movie, short, tvseries, tvepisode, video, etc)
-	PrimaryTitle   string `bson:"primarytitle" json:"primarytitle"`     //the more popular title / the title used by the filmmakers on promotional materials at the point of release
-	OriginalTitle  string `bson:"originaltitle" json:"originaltitle"`   //original title, in the original language
-	IsAdult        bool   `bson:"isadult" json:"isadult"`               //0: non-adult title; 1: adult title
-	StartYear      int    `bson:"startyear" json:"startyear"`           //represents the release year of a title. In the case of TV Series, it is the series start year
-	EndYear        int    `bson:"endyear" json:"endyear"`               //TV Series end year. ‘\N’ for all other title types
-	RuntimeMinutes int    `bson:"runtimeminutes" json:"runtimeminutes"` //primary runtime of the title, in minutes
-	Genres         string `bson:"genres" json:"genres"`                 //(string array) – includes up to three genres associated with the title
-
+	Tconst         string  `bson:"tconst" json:"tconst"`                 //alphanumeric unique identifier of the title
+	TitleType      string  `bson:"titletype" json:"titletype"`           //the type/format of the title (e.g. movie, short, tvseries, tvepisode, video, etc)
+	PrimaryTitle   string  `bson:"primarytitle" json:"primarytitle"`     //the more popular title / the title used by the filmmakers on promotional materials at the point of release
+	OriginalTitle  string  `bson:"originaltitle" json:"originaltitle"`   //original title, in the original language
+	IsAdult        bool    `bson:"isadult" json:"isadult"`               //0: non-adult title; 1: adult title
+	StartYear      int     `bson:"startyear" json:"startyear"`           //represents the release year of a title. In the case of TV Series, it is the series start year
+	EndYear        int     `bson:"endyear" json:"endyear"`               //TV Series end year. ‘\N’ for all other title types
+	RuntimeMinutes int     `bson:"runtimeminutes" json:"runtimeminutes"` //primary runtime of the title, in minutes
+	AverageRating  float32 `bson:"averagerating" json:"averagerating"`   //(float)
+	NumVotes       int     `bson:"numvotes" json:"numvotes"`             //(int)
+	Directors      string  `bson:"directors" json:"directors"`           //(string array)
+	Actors         string  `bson:"actors" json:"actors"`                 //(string array)
 }
 
-type Users struct {
-	Cl *mongo.Client
-	DB *mongo.Database
+//MongoCon structure
+type MongoCon struct {
+	Client   *mongo.Client
+	Database *mongo.Database
+}
+
+type response struct {
+	Success bool
+	ID      string
+	Data    Movie
 }
 
 //CreateMovie ... creates a movie
-func (users *Users) CreateMovie(w http.ResponseWriter, r *http.Request) {
+func (mongocon *MongoCon) CreateMovie(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var movie Movie
@@ -42,8 +52,8 @@ func (users *Users) CreateMovie(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	mCol := users.DB.Collection("movie")
-	_, err2 := mCol.InsertOne(ctx, bson.M{
+	mCol := mongocon.Database.Collection("movie")
+	result, err2 := mCol.InsertOne(ctx, bson.M{
 		"tconst":         movie.Tconst,
 		"titletype":      movie.TitleType,
 		"primarytitle":   movie.PrimaryTitle,
@@ -55,10 +65,23 @@ func (users *Users) CreateMovie(w http.ResponseWriter, r *http.Request) {
 	},
 	)
 
+	mid := result.InsertedID.(primitive.ObjectID).Hex()
+
 	if err2 != nil {
 		fmt.Println(err2)
 	}
 
+	res := response{
+		Success: true,
+		ID:      mid,
+		Data:    movie,
+	}
+
+	b, err := json.Marshal(res)
+	if err != nil {
+		// Handle Error
+	}
+	w.Write(b)
 }
 
 func UpdateMovie(w http.ResponseWriter, r *http.Request) {

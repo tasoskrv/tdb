@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,7 +17,13 @@ type DBconn struct {
 
 //InitDatabase fns
 func InitDatabase() (DBconn, func(), error) {
-	connMongo := "mongodb://127.0.0.1:2717"
+	port := "2717"
+
+	if len(os.Getenv("mport")) != 0 {
+		port = os.Getenv("mport")
+	}
+
+	connMongo := "mongodb://127.0.0.1:" + port
 	dbMongo := "tdb"
 
 	//Create client

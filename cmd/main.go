@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
+
 	con, f, err := InitDatabase()
 
 	if err != nil {
