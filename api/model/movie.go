@@ -3,10 +3,11 @@ package model
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,10 +23,11 @@ type Movie struct {
 	StartYear      int     `bson:"startyear" json:"startyear"`           //represents the release year of a title. In the case of TV Series, it is the series start year
 	EndYear        int     `bson:"endyear" json:"endyear"`               //TV Series end year. ‘\N’ for all other title types
 	RuntimeMinutes int     `bson:"runtimeminutes" json:"runtimeminutes"` //primary runtime of the title, in minutes
-	AverageRating  float32 `bson:"averagerating" json:"averagerating"`   //(float)
-	NumVotes       int     `bson:"numvotes" json:"numvotes"`             //(int)
-	Directors      string  `bson:"directors" json:"directors"`           //(string array)
-	Actors         string  `bson:"actors" json:"actors"`                 //(string array)
+	Genres         string  `bson:"genres" json:"genres"`
+	AverageRating  float32 `bson:"averagerating" json:"averagerating"` //(float)
+	NumVotes       int     `bson:"numvotes" json:"numvotes"`           //(int)
+	Directors      string  `bson:"directors" json:"directors"`         //(string array)
+	Actors         string  `bson:"actors" json:"actors"`               //(string array)
 }
 
 //MongoCon structure
@@ -35,15 +37,18 @@ type MongoCon struct {
 }
 
 type response struct {
+	success bool
+	id      string
+	data    Movie
+}
+
+type ResponseDelete struct {
 	Success bool
-	ID      string
-	Data    Movie
 }
 
 //CreateMovie ... creates a movie
 func (mongocon *MongoCon) CreateMovie(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
+	setHeaders(w)
 	var movie Movie
 
 	decoder := json.NewDecoder(r.Body)
@@ -53,7 +58,7 @@ func (mongocon *MongoCon) CreateMovie(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	mCol := mongocon.Database.Collection("movie")
-	result, err2 := mCol.InsertOne(ctx, bson.M{
+	result, err := mCol.InsertOne(ctx, bson.M{
 		"tconst":         movie.Tconst,
 		"titletype":      movie.TitleType,
 		"primarytitle":   movie.PrimaryTitle,
@@ -67,54 +72,106 @@ func (mongocon *MongoCon) CreateMovie(w http.ResponseWriter, r *http.Request) {
 
 	mid := result.InsertedID.(primitive.ObjectID).Hex()
 
-	if err2 != nil {
-		fmt.Println(err2)
+	if err != nil {
+		writeErrorLogs(err)
 	}
 
 	res := response{
-		Success: true,
-		ID:      mid,
-		Data:    movie,
+		success: true,
+		id:      mid,
+		data:    movie,
 	}
 
-	b, err := json.Marshal(res)
+	b, errR := json.Marshal(res)
+	writeResponse(w, b, errR)
+}
+
+//UpdateMovie updates movie data
+func (mongocon *MongoCon) UpdateMovie(w http.ResponseWriter, r *http.Request) {
+	setHeaders(w)
+	params := mux.Vars(r) //Get params
+
+	var movie Movie
+
+	decoder := json.NewDecoder(r.Body)
+	_ = decoder.Decode(&movie)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	moviesCollection := mongocon.Database.Collection("movie")
+
+	_, err := moviesCollection.UpdateOne(
+		ctx,
+		bson.M{"tconst": params["tconst"]},
+		bson.D{
+			{"$set", bson.D{{"titletype", movie.TitleType}}},
+			{"$set", bson.D{{"primarytitle", movie.PrimaryTitle}}},
+			{"$set", bson.D{{"originaltitle", movie.OriginalTitle}}},
+			{"$set", bson.D{{"isadult", movie.IsAdult}}},
+			{"$set", bson.D{{"startyear", movie.StartYear}}},
+			{"$set", bson.D{{"endyear", movie.EndYear}}},
+			{"$set", bson.D{{"runtimeminutes", movie.RuntimeMinutes}}},
+			{"$set", bson.D{{"genres", movie.Genres}}},
+		},
+	)
+	if err != nil {
+		writeErrorLogs(err)
+	}
+	//fmt.Printf("Updated %v Documents!\n", result.ModifiedCount)
+
+	res := response{
+		success: true,
+		data:    movie,
+	}
+
+	b, errR := json.Marshal(res)
+
+	writeResponse(w, b, errR)
+}
+
+type bot interface {
+	DeleteMovie(w http.ResponseWriter, r *http.Request)
+}
+
+//DeleteMovie deletes a movie
+func (mongocon *MongoCon) DeleteMovie(w http.ResponseWriter, r *http.Request) {
+	setHeaders(w)
+	params := mux.Vars(r) //Get params
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	moviesCollection := mongocon.Database.Collection("movie")
+
+	_, err := moviesCollection.DeleteOne(ctx, bson.M{"tconst": params["tconst"]})
+	if err != nil {
+		writeErrorLogs(err)
+	}
+
+	res := ResponseDelete{
+		Success: true,
+	}
+
+	b, _ := json.Marshal(res)
+
+	w.Write(b)
+	//writeResponse(w, b, errR)
+}
+
+func setHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+}
+
+func writeResponse(w http.ResponseWriter, b []byte, err error) {
 	if err != nil {
 		// Handle Error
+		w.Write([]byte(err.Error()))
 	}
+
 	w.Write(b)
 }
 
-func UpdateMovie(w http.ResponseWriter, r *http.Request) {
-	/*
-		w.Header().Set("Content-Type", "application/json")
-		params := mux.Vars(r) //Get params
-		for index, item := range Books {
-			if item.ID == params["id"] {
-				Books = append(Books[:index], Books[index+1:]...)
-
-				var book Book
-				_ = json.NewDecoder(r.Body).Decode(&book)
-				book.ID = strconv.Itoa(rand.Intn(1000000))
-				Books = append(Books, book)
-				json.NewEncoder(w).Encode(book)
-				return
-			}
-		}
-
-		json.NewEncoder(w).Encode(Books)
-	*/
-}
-
-func DeleteMovie(w http.ResponseWriter, r *http.Request) {
-	/*
-		w.Header().Set("Content-Type", "application/json")
-		params := mux.Vars(r) //Get params
-		for index, item := range Books {
-			if item.ID == params["id"] {
-				Books = append(Books[:index], Books[index+1:]...)
-				break
-			}
-		}
-
-		json.NewEncoder(w).Encode(Books)*/
+func writeErrorLogs(err error) {
+	log.Fatal(err)
 }
