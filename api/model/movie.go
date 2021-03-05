@@ -101,6 +101,12 @@ func (mongocon *MongoCon) UpdateMovie(w http.ResponseWriter, r *http.Request) {
 
 	moviesCollection := mongocon.Database.Collection("movie")
 
+	
+	/*
+		upd := bson.M{
+		"$set": c}
+	*/
+	
 	_, err := moviesCollection.UpdateOne(
 		ctx,
 		bson.M{"tconst": params["tconst"]},
