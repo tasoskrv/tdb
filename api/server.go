@@ -27,5 +27,9 @@ func Start(client *mongo.Client, database *mongo.Database) {
 	r.HandleFunc("/api/crew/{tconst}", modelStruct.UpdateCrew).Methods("PUT")
 	r.HandleFunc("/api/crew/{tconst}", modelStruct.DeleteCrew).Methods("DELETE")
 
+	r.HandleFunc("/api/rating", modelStruct.CreateRating).Methods("POST")
+	r.HandleFunc("/api/rating/{tconst}", modelStruct.UpdateRating).Methods("PUT")
+	r.HandleFunc("/api/rating/{tconst}", modelStruct.DeleteRating).Methods("DELETE")
+
 	log.Fatal(http.ListenAndServe(":8000", r))
 }
