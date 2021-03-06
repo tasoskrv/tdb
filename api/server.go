@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"./model/crew"
+	"./model/episode"
 	"./model/movie"
 	"./model/person"
 	"./model/rating"
@@ -19,6 +20,7 @@ func Start(client *mongo.Client, database *mongo.Database) {
 	crew.RegisterHandler(r, client, database)
 	rating.RegisterHandler(r, client, database)
 	person.RegisterHandler(r, client, database)
+	episode.RegisterHandler(r, client, database)
 
 	log.Fatal(http.ListenAndServe(":8000", r))
 }

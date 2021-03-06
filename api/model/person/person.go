@@ -31,8 +31,8 @@ func RegisterHandler(r *mux.Router, client *mongo.Client, database *mongo.Databa
 
 	//r.HandleFunc("/api/movies/{tconst}", model.GetMovie).Methods("GET")
 	r.HandleFunc("/api/"+collection, condb.Create).Methods("POST")
-	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Update).Methods("PUT")
-	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Delete).Methods("DELETE")
+	r.HandleFunc("/api/"+collection+"/{nconst}", condb.Update).Methods("PUT")
+	r.HandleFunc("/api/"+collection+"/{nconst}", condb.Delete).Methods("DELETE")
 }
 
 func getType() Person {
