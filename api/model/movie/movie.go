@@ -8,21 +8,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var collection string = "movie"
+
 type con struct {
 	client   *mongo.Client
 	database *mongo.Database
-}
-
-var collection string = "movie"
-
-func RegisterHandler(r *mux.Router, client *mongo.Client, database *mongo.Database) {
-	condb := &con{client, database}
-
-	//Route Handlers / Endpoints
-	//r.HandleFunc("/api/movies/{tconst}", model.GetMovie).Methods("GET")
-	r.HandleFunc("/api/movie", condb.CreateMovie).Methods("POST")
-	r.HandleFunc("/api/movie/{tconst}", condb.UpdateMovie).Methods("PUT")
-	r.HandleFunc("/api/movie/{tconst}", condb.DeleteMovie).Methods("DELETE")
 }
 
 //Movie structure
@@ -38,23 +28,43 @@ type Movie struct {
 	Genres         string `bson:"genres" json:"genres"`
 }
 
-//CreateMovie creates a movie
-func (mongocon *con) CreateMovie(w http.ResponseWriter, r *http.Request) {
-	var movie Movie
-	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
-	model.Create(w, r, collection, movie, db)
+//RegisterHandler routes Handlers / Endpoints
+func RegisterHandler(r *mux.Router, client *mongo.Client, database *mongo.Database) {
+	condb := &con{client, database}
+
+	//r.HandleFunc("/api/movies/{tconst}", model.GetMovie).Methods("GET")
+	r.HandleFunc("/api/"+collection, condb.Create).Methods("POST")
+	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Update).Methods("PUT")
+	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Delete).Methods("DELETE")
 }
 
-//UpdateMovie updates movie data
-func (mongocon *con) UpdateMovie(w http.ResponseWriter, r *http.Request) {
+func getType() Movie {
 	var movie Movie
-	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
-	model.Update(w, r, collection, movie, db)
+
+	return movie
 }
 
-//DeleteMovie deletes a movie
-func (mongocon *con) DeleteMovie(w http.ResponseWriter, r *http.Request) {
-	var movie Movie
+func getID() string {
+	return "tconst"
+}
+
+//Create creates a movie
+func (mongocon *con) Create(w http.ResponseWriter, r *http.Request) {
+	stype := getType()
 	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
-	model.Delete(w, r, collection, movie, db)
+	model.Create(db, w, r, collection, stype)
+}
+
+//Update updates movie data
+func (mongocon *con) Update(w http.ResponseWriter, r *http.Request) {
+	stype := getType()
+	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
+	model.Update(db, w, r, collection, stype, getID())
+}
+
+//Delete deletes a movie
+func (mongocon *con) Delete(w http.ResponseWriter, r *http.Request) {
+	stype := getType()
+	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
+	model.Delete(db, w, r, collection, stype, getID())
 }

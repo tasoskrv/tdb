@@ -8,47 +8,58 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var collection string = "rating"
+
 type con struct {
 	client   *mongo.Client
 	database *mongo.Database
 }
 
-var collection string = "rating"
+//Rating structure
+type Rating struct {
+	Tconst   string `bson:"tconst" json:"tconst"`
+	Average  string `bson:"average" json:"average"`
+	Numvotes string `bson:"numvotes" json:"numvotes"`
+}
 
+//RegisterHandler routes
 func RegisterHandler(r *mux.Router, client *mongo.Client, database *mongo.Database) {
 	condb := &con{client, database}
 
 	//Route Handlers / Endpoints
 	//r.HandleFunc("/api/movies/{tconst}", model.GetMovie).Methods("GET")
-	r.HandleFunc("/api/rating", condb.CreateCrew).Methods("POST")
-	r.HandleFunc("/api/rating/{tconst}", condb.UpdateCrew).Methods("PUT")
-	r.HandleFunc("/api/rating/{tconst}", condb.DeleteCrew).Methods("DELETE")
+	r.HandleFunc("/api/"+collection, condb.Create).Methods("POST")
+	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Update).Methods("PUT")
+	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Delete).Methods("DELETE")
 }
 
-//Crew structure
-type Rating struct {
-	Tconst   string `bson:"tconst" json:"tconst"`
-	average  string `bson:"average" json:"average"`
-	numvotes string `bson:"numvotes" json:"numvotes"`
-}
-
-//CreateCrew creates movie crew
-func (mongocon *con) CreateCrew(w http.ResponseWriter, r *http.Request) {
+func getType() Rating {
 	var rating Rating
-	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
-	model.Create(w, r, collection, rating, db)
+
+	return rating
 }
 
-//UpdateMovie updates movie data
-func (mongocon *con) UpdateCrew(w http.ResponseWriter, r *http.Request) {
-	var rating Rating
-	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
-	model.Update(w, r, collection, rating, db)
+func getID() string {
+	return "tconst"
 }
 
-//DeleteMovie deletes a movie
-func (mongocon *con) DeleteCrew(w http.ResponseWriter, r *http.Request) {
-	var rating Rating
+//Create creates movie rating
+func (mongocon *con) Create(w http.ResponseWriter, r *http.Request) {
+	stype := getType()
 	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
-	model.Delete(w, r, collection, rating, db)
+	model.Create(db, w, r, collection, stype)
+}
+
+//Update updates movie rating
+func (mongocon *con) Update(w http.ResponseWriter, r *http.Request) {
+	stype := getType()
+	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
+	model.Update(db, w, r, collection, stype, getID())
+}
+
+//Delete deletes movie rating
+func (mongocon *con) Delete(w http.ResponseWriter, r *http.Request) {
+	stype := getType()
+	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
+	model.Delete(db, w, r, collection, stype, getID())
 }

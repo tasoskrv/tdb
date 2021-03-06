@@ -14,7 +14,7 @@ import (
 )
 
 //Create func
-func Create(w http.ResponseWriter, r *http.Request, c string, v interface{}, dbcon *MongoCon) {
+func Create(dbcon *MongoCon, w http.ResponseWriter, r *http.Request, c string, v interface{}) {
 	SetHeaders(w)
 
 	_ = DecodeBody(r, &v)
@@ -34,7 +34,7 @@ func Create(w http.ResponseWriter, r *http.Request, c string, v interface{}, dbc
 	Respond(w, r, http.StatusOK, v)
 }
 
-func Update(w http.ResponseWriter, r *http.Request, c string, v interface{}, dbcon *MongoCon) {
+func Update(dbcon *MongoCon, w http.ResponseWriter, r *http.Request, c string, v interface{}, id string) {
 	SetHeaders(w)
 	params := mux.Vars(r) //Get params
 
@@ -47,7 +47,7 @@ func Update(w http.ResponseWriter, r *http.Request, c string, v interface{}, dbc
 
 	_, err := collection.UpdateOne(
 		ctx,
-		bson.M{"tconst": params["tconst"]},
+		bson.M{id: params[id]},
 		bson.M{"$set": v},
 	)
 
@@ -59,7 +59,7 @@ func Update(w http.ResponseWriter, r *http.Request, c string, v interface{}, dbc
 	Respond(w, r, http.StatusOK, v)
 }
 
-func Delete(w http.ResponseWriter, r *http.Request, c string, v interface{}, dbcon *MongoCon) {
+func Delete(dbcon *MongoCon, w http.ResponseWriter, r *http.Request, c string, v interface{}, id string) {
 	SetHeaders(w)
 	params := mux.Vars(r) //Get params
 
@@ -68,7 +68,7 @@ func Delete(w http.ResponseWriter, r *http.Request, c string, v interface{}, dbc
 
 	collection := dbcon.Database.Collection(c)
 
-	_, err := collection.DeleteOne(ctx, bson.M{"tconst": params["tconst"]})
+	_, err := collection.DeleteOne(ctx, bson.M{id: params[id]})
 	if err != nil {
 		RespondErr(w, r, http.StatusConflict, err)
 	}
@@ -113,15 +113,3 @@ func RespondErr(w http.ResponseWriter, r *http.Request, status int, args ...inte
 func RespondHTTPErr(w http.ResponseWriter, r *http.Request, status int) {
 	RespondErr(w, r, status, http.StatusText(status))
 }
-
-/*****
-func (m *MongoCon) SetMongo(client *mongo.Client, database *mongo.Database) {
-	m.Client = client
-	m.Database = database
-}
-
-// GetMongo receives a copy of MongoCon since it doesn't need to modify it.
-func (m *MongoCon) GetMongo() *MongoCon {
-	return m
-}
-*/
