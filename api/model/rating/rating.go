@@ -27,7 +27,7 @@ func RegisterHandler(r *mux.Router, client *mongo.Client, database *mongo.Databa
 	condb := &con{client, database}
 
 	//Route Handlers / Endpoints
-	//r.HandleFunc("/api/movies/{tconst}", model.GetMovie).Methods("GET")
+	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Get).Methods("GET")
 	r.HandleFunc("/api/"+collection, condb.Create).Methods("POST")
 	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Update).Methods("PUT")
 	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Delete).Methods("DELETE")
@@ -41,6 +41,12 @@ func getType() Rating {
 
 func getID() string {
 	return "tconst"
+}
+
+//Get return single movie
+func (mongocon *con) Get(w http.ResponseWriter, r *http.Request) {
+	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
+	model.Get(db, w, r, collection, getID())
 }
 
 //Create creates movie rating

@@ -32,7 +32,7 @@ type Movie struct {
 func RegisterHandler(r *mux.Router, client *mongo.Client, database *mongo.Database) {
 	condb := &con{client, database}
 
-	//r.HandleFunc("/api/movies/{tconst}", model.GetMovie).Methods("GET")
+	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Get).Methods("GET")
 	r.HandleFunc("/api/"+collection, condb.Create).Methods("POST")
 	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Update).Methods("PUT")
 	r.HandleFunc("/api/"+collection+"/{tconst}", condb.Delete).Methods("DELETE")
@@ -46,6 +46,12 @@ func getType() Movie {
 
 func getID() string {
 	return "tconst"
+}
+
+//Get return single movie
+func (mongocon *con) Get(w http.ResponseWriter, r *http.Request) {
+	db := &model.MongoCon{Database: mongocon.database, Client: mongocon.client}
+	model.Get(db, w, r, collection, getID())
 }
 
 //Create creates a movie
